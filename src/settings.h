@@ -8,6 +8,7 @@ struct SettingsManager {
   int mqttPort = 1883;
   String sensorName = "light";
   String tz = "AEST-10AEDT,M10.1.0,M4.1.0/3";
+  int notify = 60;
 
   SettingsManager(); // Constructor declaration
 

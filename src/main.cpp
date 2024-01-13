@@ -9,7 +9,7 @@
 
 WiFiClient wifiClient;
 
-std::shared_ptr<RadarMqtt> mqtt;
+std::shared_ptr<LuxMqtt> mqtt;
 std::shared_ptr<SettingsManager> settings;
 std::unique_ptr<TwoWire> wireInstance;
 std::unique_ptr<Adafruit_TCS34725> tcs;
@@ -50,7 +50,7 @@ void setup() {
     Serial.printf("Failed to get time from server\n");
   }
 
-  mqtt = std::make_shared<RadarMqtt>(settings);
+  mqtt = std::make_shared<LuxMqtt>(settings, std::move(tcs));
 }
 
 // int ii;
@@ -64,20 +64,5 @@ void loop() {
       DateTime.begin(1000);
       lastInvokeTime = currentMillis;
   }
-
-  uint16_t r, g, b, c, colorTemp, lux;
-
-  tcs->getRawData(&r, &g, &b, &c);
-  // colorTemp = tcs->calculateColorTemperature(r, g, b);
-  colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
-  lux = tcs->calculateLux(r, g, b);
-
-  Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
-  Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
-  Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
-  Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
-  Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
-  Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
-  Serial.println(" ");
-  delay(100);
+  delay(10);
 }

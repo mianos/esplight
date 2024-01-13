@@ -48,6 +48,7 @@ std::vector<SettingsManager::SettingChange> SettingsManager::loadFromDocument(Js
     getConfigOrDefault(doc, "mqtt_port", mqttPort);
     getConfigOrDefault(doc, "sensor_name", sensorName);
     getConfigOrDefault(doc, "tz", tz);
+    getConfigOrDefault(doc, "notify", notify);
     return changes;
 }
 
@@ -57,6 +58,7 @@ void SettingsManager::fillJsonDocument(JsonDocument& doc) {
     doc["mqtt_port"] = mqttPort;
     doc["sensor_name"] = sensorName;
     doc["tz"] = tz;
+    doc["notify"] = notify;
 }
 
 void SettingsManager::printSettings() {
@@ -64,4 +66,5 @@ void SettingsManager::printSettings() {
     Serial.printf("MQTT Port: %d\n", mqttPort);
     Serial.printf("Sensor Name: %s\n", sensorName.c_str());
     Serial.printf("Timezone: %s\n", tz.c_str());
+    Serial.printf("Notify: %d seconds\n", notify);
 }

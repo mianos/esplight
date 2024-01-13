@@ -10,16 +10,16 @@
 #include "mqtt.h"
 
 
-void RadarMqtt::callback(char* topic_str, byte* payload, unsigned int length) {
+void LuxMqtt::callback(char* topic_str, byte* payload, unsigned int length) {
   auto topic = String(topic_str);
   auto splitter = StringSplitter(topic, '/', 4);
-  int itemCount = splitter.getItemCount();
+  auto itemCount = splitter.getItemCount();
   if (itemCount < 3) {
     Serial.printf("Item count less than 3 %d '%s'\n", itemCount, topic_str);
     return;
   }
 #if 1
-  for (int i = 0; i < itemCount; i++) {
+  for (auto i = 0; i < itemCount; i++) {
     String item = splitter.getItemAtIndex(i);
     Serial.println("Item @ index " + String(i) + ": " + String(item));
   }
@@ -54,8 +54,8 @@ void RadarMqtt::callback(char* topic_str, byte* payload, unsigned int length) {
 }
 
 
-RadarMqtt::RadarMqtt(std::shared_ptr<SettingsManager> settings)
-    : settings(settings), client(espClient) {
+LuxMqtt::LuxMqtt(std::shared_ptr<SettingsManager> settings, std::unique_ptr<Adafruit_TCS34725> tcs)
+    : settings(settings), tcs(std::move(tcs)), client(espClient) {
   client.setServer(settings->mqttServer.c_str(), settings->mqttPort);
   Serial.printf("init mqtt, server '%s'\n", settings->mqttServer.c_str());
   client.setCallback([this](char* topic_str, byte* payload, unsigned int length) {
@@ -64,7 +64,7 @@ RadarMqtt::RadarMqtt(std::shared_ptr<SettingsManager> settings)
 }
 
 
-bool RadarMqtt::reconnect() {
+bool LuxMqtt::reconnect() {
   String clientId =  WiFi.getHostname(); // name + '-' + String(random(0xffff), HEX);
   Serial.printf("Attempting MQTT connection... to %s name %s\n", settings->mqttServer.c_str(), clientId.c_str());
   if (client.connect(clientId.c_str())) {
@@ -91,11 +91,36 @@ bool RadarMqtt::reconnect() {
   }
 }
 
-void RadarMqtt::handle() {
+void LuxMqtt::calculate_lux() {
+#
+  uint16_t r, g, b, c, colorTemp, lux;
+
+  tcs->getRawData(&r, &g, &b, &c);
+  // colorTemp = tcs->calculateColorTemperature(r, g, b);
+  colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
+  lux = tcs->calculateLux(r, g, b);
+
+  Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
+  Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
+  Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
+  Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
+  Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
+  Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
+  Serial.println(" ");
+
+}
+
+void LuxMqtt::handle() {
   if (!client.connected()) {
     if (!reconnect()) {
       return;
     }
   }
+  auto currentMillis = millis();
+  if (currentMillis - lastLuxCalculation >= settings->notify * 1000) {
+    calculate_lux();
+    lastLuxCalculation = currentMillis;  // Update the last calculation time
+  }
+
   client.loop();  // mqtt client loop
 }
