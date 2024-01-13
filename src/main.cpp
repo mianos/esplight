@@ -11,8 +11,8 @@ WiFiClient wifiClient;
 
 std::shared_ptr<RadarMqtt> mqtt;
 std::shared_ptr<SettingsManager> settings;
-TwoWire wireInstance = TwoWire(0);
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
+std::unique_ptr<TwoWire> wireInstance;
+std::unique_ptr<Adafruit_TCS34725> tcs;
 
 unsigned long lastInvokeTime = 0; // Store the last time you called the function
 const unsigned long dayMillis = 24UL * 60 * 60 * 1000; // Milliseconds in a day
@@ -32,9 +32,11 @@ void setup() {
   settings = std::make_shared<SettingsManager>();
 
  
-  wireInstance.begin(33, 35); // GPIO_NUM_16, GPIO_NUM_17); 
+  wireInstance = std::make_unique<TwoWire>(0);
+  wireInstance->begin(33, 35);
+  tcs = std::make_unique<Adafruit_TCS34725>(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 
-  if (tcs.begin(TCS34725_ADDRESS, &wireInstance)) {
+  if (tcs->begin(TCS34725_ADDRESS, wireInstance.get())) {
     Serial.println("Found sensor");
   } else {
     Serial.println("No TCS34725 found ... check your connections");
@@ -65,10 +67,10 @@ void loop() {
 
   uint16_t r, g, b, c, colorTemp, lux;
 
-  tcs.getRawData(&r, &g, &b, &c);
-  // colorTemp = tcs.calculateColorTemperature(r, g, b);
-  colorTemp = tcs.calculateColorTemperature_dn40(r, g, b, c);
-  lux = tcs.calculateLux(r, g, b);
+  tcs->getRawData(&r, &g, &b, &c);
+  // colorTemp = tcs->calculateColorTemperature(r, g, b);
+  colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
+  lux = tcs->calculateLux(r, g, b);
 
   Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
   Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
