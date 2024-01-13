@@ -49,6 +49,8 @@ std::vector<SettingsManager::SettingChange> SettingsManager::loadFromDocument(Js
     getConfigOrDefault(doc, "sensor_name", sensorName);
     getConfigOrDefault(doc, "tz", tz);
     getConfigOrDefault(doc, "notify", notify);
+    getConfigOrDefault(doc, "lux_change", lux_change);
+    getConfigOrDefault(doc, "colour_temp_change", colour_temp_change);
     return changes;
 }
 
@@ -59,6 +61,8 @@ void SettingsManager::fillJsonDocument(JsonDocument& doc) {
     doc["sensor_name"] = sensorName;
     doc["tz"] = tz;
     doc["notify"] = notify;
+    doc["lux_change"] = lux_change;
+    doc["colour_temp_change"] = colour_temp_change;
 }
 
 void SettingsManager::printSettings() {
@@ -67,4 +71,6 @@ void SettingsManager::printSettings() {
     Serial.printf("Sensor Name: %s\n", sensorName.c_str());
     Serial.printf("Timezone: %s\n", tz.c_str());
     Serial.printf("Notify: %d seconds\n", notify);
+    Serial.printf("Lux change: %d\n", lux_change);
+    Serial.printf("Colour temp change: %d\n", colour_temp_change);
 }

@@ -91,36 +91,52 @@ bool LuxMqtt::reconnect() {
   }
 }
 
-void LuxMqtt::calculate_lux() {
-#
-  uint16_t r, g, b, c, colorTemp, lux;
 
+void LuxMqtt::calculate_lux(uint16_t& lux, uint16_t& colorTemp, uint16_t& r, uint16_t& g, uint16_t& b, uint16_t& c) {
   tcs->getRawData(&r, &g, &b, &c);
-  // colorTemp = tcs->calculateColorTemperature(r, g, b);
   colorTemp = tcs->calculateColorTemperature_dn40(r, g, b, c);
   lux = tcs->calculateLux(r, g, b);
+}
 
-  Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
-  Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
-  Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
-  Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
-  Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
-  Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
-  Serial.println(" ");
+void LuxMqtt::outputValues(uint16_t lux, uint16_t colorTemp, uint16_t r, uint16_t g, uint16_t b, uint16_t c) {
+    JsonDocument doc;
+    doc["time"] = DateTime.toISOString();
+    doc["lux"] = lux;
+    doc["colour_temp"] = colorTemp; 
+    String status_topic = "tele/" + settings->sensorName + "/ctlux";
+    String output;
+    serializeJson(doc, output);
+    client.publish(status_topic.c_str(), output.c_str());
 
+#if 0
+    Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
+    Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
+    Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
+    Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
+    Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
+    Serial.print("C: "); Serial.print(c, DEC); Serial.println(" ");
+#endif
 }
 
 void LuxMqtt::handle() {
-  if (!client.connected()) {
-    if (!reconnect()) {
-      return;
+    if (!client.connected()) {
+      if (!reconnect()) {
+        return;
+      }
     }
-  }
-  auto currentMillis = millis();
-  if (currentMillis - lastLuxCalculation >= settings->notify * 1000) {
-    calculate_lux();
-    lastLuxCalculation = currentMillis;  // Update the last calculation time
-  }
+    uint16_t lux, colorTemp, r, g, b, c;
+    calculate_lux(lux, colorTemp, r, g, b, c);
 
-  client.loop();  // mqtt client loop
+    auto currentMillis = millis();
+    bool luxChanged = abs(static_cast<int>(lux) - static_cast<int>(lastLux)) > settings->lux_change;
+    bool colorTempChanged = abs(static_cast<int>(colorTemp) - static_cast<int>(lastColorTemp)) > settings->colour_temp_change;
+    bool shouldOutput = luxChanged || colorTempChanged || currentMillis - lastLuxCalculation >= settings->notify * 1000;
+
+    if (shouldOutput) {
+        outputValues(lux, colorTemp, r, g, b, c);
+        lastLux = lux;
+        lastColorTemp = colorTemp;
+        lastLuxCalculation = currentMillis;
+    }
+    client.loop();  // mqtt client loop
 }
