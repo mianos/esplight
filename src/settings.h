@@ -10,7 +10,7 @@ struct SettingsManager {
   String tz = "AEST-10AEDT,M10.1.0,M4.1.0/3";
   int notify = 60;
   int lux_change = 5;
-  int colour_temp_change = 25;
+  int colour_temp_change = 100;
 
   SettingsManager(); // Constructor declaration
 

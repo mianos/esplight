@@ -1,13 +1,46 @@
+#include <unordered_map>
+#include <memory>
+#include <sstream>
+
 #include <ESPDateTime.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <StringSplitter.h>
-#include <memory>
 
 #include "provision.h"
 
 #include "mqtt.h"
+
+const int ONBOARD_LED_PIN = GPIO_NUM_18;
+const int FLOOD_PIN = GPIO_NUM_37;
+
+static std::unordered_map<std::string, int> pinMap = {
+  {"onboard_led", ONBOARD_LED_PIN},
+  {"flood", FLOOD_PIN}
+};
+
+void LuxMqtt::publish_error(const std::string& error) {
+    JsonDocument doc;
+    doc["time"] = DateTime.toISOString();
+    doc["error"] = error;
+    String topic = "tele/" + settings->sensorName + "/error";
+    String output;
+    serializeJson(doc, output);
+    client.publish(topic.c_str(), topic.c_str());
+}
+
+
+void LuxMqtt::setPin(const std::string& pinName, bool state) {
+    auto it = pinMap.find(pinName);
+    if (it != pinMap.end()) {
+        digitalWrite(it->second, state);
+    } else {
+      std::ostringstream stream;
+      stream << "Error, unknown pin '" << pinName << "'";
+      publish_error(stream.str());
+    }
+}
 
 
 void LuxMqtt::callback(char* topic_str, byte* payload, unsigned int length) {
@@ -42,6 +75,10 @@ void LuxMqtt::callback(char* topic_str, byte* payload, unsigned int length) {
     } else if (dest == "restart") {
         Serial.printf("rebooting\n");
         ESP.restart();
+    } else if (dest == "switch") {
+      for (JsonPair kv : jpl.as<JsonObject>()) {
+        setPin(kv.key().c_str(), kv.value().as<bool>());
+      }
     } else if (dest == "settings") {
       auto result = settings->loadFromDocument(jpl);
 //      if (std::find(result.begin(), result.end(), SettingsManager::SettingChange::VolumeChanged) != result.end()) {
@@ -56,8 +93,13 @@ void LuxMqtt::callback(char* topic_str, byte* payload, unsigned int length) {
 
 LuxMqtt::LuxMqtt(std::shared_ptr<SettingsManager> settings, std::unique_ptr<Adafruit_TCS34725> tcs)
     : settings(settings), tcs(std::move(tcs)), client(espClient) {
+
+  client.setBufferSize(1024);
   client.setServer(settings->mqttServer.c_str(), settings->mqttPort);
   Serial.printf("init mqtt, server '%s'\n", settings->mqttServer.c_str());
+  for (const auto& pair : pinMap) {
+    pinMode(pair.second, OUTPUT); // Assuming these are output pins
+  }
   client.setCallback([this](char* topic_str, byte* payload, unsigned int length) {
     callback(topic_str, payload, length);
   });
@@ -107,15 +149,6 @@ void LuxMqtt::outputValues(uint16_t lux, uint16_t colorTemp, uint16_t r, uint16_
     String output;
     serializeJson(doc, output);
     client.publish(status_topic.c_str(), output.c_str());
-
-#if 0
-    Serial.print("Color Temp: "); Serial.print(colorTemp, DEC); Serial.print(" K - ");
-    Serial.print("Lux: "); Serial.print(lux, DEC); Serial.print(" - ");
-    Serial.print("R: "); Serial.print(r, DEC); Serial.print(" ");
-    Serial.print("G: "); Serial.print(g, DEC); Serial.print(" ");
-    Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
-    Serial.print("C: "); Serial.print(c, DEC); Serial.println(" ");
-#endif
 }
 
 void LuxMqtt::handle() {

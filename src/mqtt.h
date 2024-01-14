@@ -20,6 +20,8 @@ struct LuxMqtt {
   void callback(char* topic_str, byte* payload, unsigned int length);
   void calculate_lux(uint16_t& lux, uint16_t& colorTemp, uint16_t& r, uint16_t& g, uint16_t& b, uint16_t& c);
   void outputValues(uint16_t lux, uint16_t colorTemp, uint16_t r, uint16_t g, uint16_t b, uint16_t c);
+  void setPin(const std::string& pinName, bool state);
+  void publish_error(const std::string& error);
 
   bool reconnect();
   void handle();

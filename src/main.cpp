@@ -16,18 +16,12 @@ std::unique_ptr<Adafruit_TCS34725> tcs;
 
 unsigned long lastInvokeTime = 0; // Store the last time you called the function
 const unsigned long dayMillis = 24UL * 60 * 60 * 1000; // Milliseconds in a day
-const int LED_PIN = GPIO_NUM_18;
 
 void setup() {
-  pinMode(LED_PIN, OUTPUT);  // Set the LED pin as an output
-  digitalWrite(LED_PIN, HIGH);  // Set the LED pin to LOW (LED off)
-
   Serial.begin(115200);
   // esp_wifi_set_ps(WIFI_PS_NONE);
 
   delay(2000);
-  //reset_provisioning();
-  digitalWrite(LED_PIN, LOW);  // Set the LED pin to LOW (LED off)
   wifi_connect();
   settings = std::make_shared<SettingsManager>();
 
