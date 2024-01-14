@@ -35,6 +35,7 @@ void LuxMqtt::setPin(const std::string& pinName, bool state) {
     auto it = pinMap.find(pinName);
     if (it != pinMap.end()) {
         digitalWrite(it->second, state);
+        Serial.printf("Writing %d to pin %d\n", state, it->second);
     } else {
       std::ostringstream stream;
       stream << "Error, unknown pin '" << pinName << "'";

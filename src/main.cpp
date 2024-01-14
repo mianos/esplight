@@ -1,3 +1,4 @@
+#include <ArduinoOTA.h>
 #include <ESPDateTime.h>
 #include <SPI.h> 
 #include <Wire.h>
@@ -58,5 +59,6 @@ void loop() {
       DateTime.begin(1000);
       lastInvokeTime = currentMillis;
   }
+  ArduinoOTA.handle();
   delay(10);
 }
